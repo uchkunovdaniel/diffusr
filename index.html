@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From noise to image</title>
+<style>
+:root{--bg:#000;--fg:#f5f5f7;--mute:#86868b;--panel:rgba(255,255,255,.07);--line:rgba(255,255,255,.12);--blue:#2997ff;--btn-fg:#000;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#fbfbfd;--fg:#1d1d1f;--panel:rgba(0,0,0,.045);--line:rgba(0,0,0,.1);--blue:#0066cc;--btn-fg:#fff}}
+:root[data-theme="light"]{--bg:#fbfbfd;--fg:#1d1d1f;--panel:rgba(0,0,0,.045);--line:rgba(0,0,0,.1);--blue:#0066cc;--btn-fg:#fff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+section{max-width:1040px;margin:0 auto;padding:0 22px}
+.hero{text-align:center;padding:120px 22px 72px}
+h1{font-size:clamp(44px,9vw,96px);font-weight:800;letter-spacing:-.045em;line-height:1.02;margin:0}
+.sub{font-size:clamp(19px,3vw,28px);color:var(--mute);margin:22px auto 0;max-width:640px;line-height:1.3;letter-spacing:-.01em}
+.grad{background:linear-gradient(90deg,#8e8e93,var(--fg) 60%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stage{display:grid;grid-template-columns:1fr;gap:18px;justify-items:center}
+.main{width:min(520px,100%);aspect-ratio:1;border-radius:28px;overflow:hidden;box-shadow:0 40px 120px rgba(41,151,255,.18),0 10px 40px rgba(0,0,0,.4);background:#111}
+canvas{display:block;width:100%;height:100%}
+.meter{width:min(520px,100%);height:4px;border-radius:2px;background:var(--line);overflow:hidden}.meter i{display:block;height:100%;width:100%;background:var(--blue);transition:width .25s ease-in-out}
+.acc{width:min(520px,100%)}.acc summary{list-style:none;cursor:pointer;text-align:center;color:var(--blue);font-size:15px;padding:10px}.acc summary::-webkit-details-marker{display:none}.acc summary::after{content:' \203A';display:inline-block;transition:transform .35s ease-in-out}.acc[open] summary::after{transform:rotate(90deg)}.acc .minis{margin-top:8px}
+.minis{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:min(520px,100%)}
+.mini{text-align:center}
+.mini .c{aspect-ratio:1;border-radius:18px;overflow:hidden;background:#111}
+.mini small{display:block;margin-top:10px;font-size:13px;color:var(--mute);letter-spacing:-.005em}
+.readout{font-size:15px;color:var(--mute);letter-spacing:-.01em;font-variant-numeric:tabular-nums;text-align:center;min-height:22px}
+.readout b{color:var(--fg);font-weight:600}
+.panel{margin:40px auto 0;max-width:720px;background:var(--panel);border:1px solid var(--line);border-radius:28px;padding:28px;-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px)}
+.row{display:grid;grid-template-columns:130px 1fr 52px;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.row:last-of-type{border:0}
+.row label{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.row output{text-align:right;color:var(--mute);font-size:15px;font-variant-numeric:tabular-nums}
+.hint{grid-column:1/-1;font-size:13px;color:var(--mute);margin-top:-6px;line-height:1.4}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--line);outline:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.4);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.prompt{display:flex;gap:10px;padding-bottom:6px}.prompt[hidden]{display:none}.prompt input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:980px;padding:13px 20px;font:inherit;font-size:16px;color:var(--fg);outline:0}.prompt input:focus{border-color:var(--blue)}.prompt button:disabled{opacity:.5}.pstat{font-size:14px;color:var(--mute);padding:6px 6px 16px;min-height:30px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--line)}
+button{font:inherit;cursor:pointer;border:0;transition:all .35s ease-in-out}
+.chip{padding:9px 16px;border-radius:980px;background:var(--panel);color:var(--fg);font-size:14px;border:1px solid var(--line)}
+.chip.on{background:var(--fg);color:var(--bg)}
+.actions{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+.pri{background:var(--blue);color:var(--btn-fg);padding:13px 28px;border-radius:980px;font-size:16px;font-weight:600}
+.pri:hover{filter:brightness(1.12)}
+.sec{background:transparent;color:var(--blue);padding:13px 22px;border-radius:980px;font-size:16px;border:1px solid var(--line)}
+.seed{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+.steps3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;padding:110px 22px 130px;max-width:1040px;margin:0 auto}
+.card{background:var(--panel);border-radius:28px;padding:32px}
+.card h3{font-size:24px;letter-spacing:-.03em;margin:0 0 10px;font-weight:700}
+.card p{margin:0;color:var(--mute);font-size:17px;line-height:1.4}
+.card .n{color:var(--blue);font-weight:700;font-size:14px;margin-bottom:14px}
+@media(max-width:560px){.row{grid-template-columns:90px 1fr 44px}.hero{padding-top:80px}}
+</style>
+</head>
+<body>
+<section class="hero">
+  <h1><span class="grad">Noise.<br>Then, an image.</span></h1>
+  <p class="sub">AI doesn't paint. It listens to static, and slowly removes everything that doesn't belong. Watch it happen.</p>
+</section>
+
+<section>
+  <div class="stage">
+    <div class="main"><canvas id="cx" width="128" height="128"></canvas></div>
+    <div class="readout" id="ro"></div>
+    <div class="meter"><i id="mt"></i></div>
+    <details class="acc"><summary>Under the hood</summary><div class="minis">
+      <div class="mini"><div class="c"><canvas id="cg" width="128" height="128"></canvas></div><small>What the model thinks it's making</small></div>
+      <div class="mini"><div class="c"><canvas id="ce" width="128" height="128"></canvas></div><small>The noise it chooses to remove</small></div>
+    </div></details>
+  </div>
+
+  <div class="panel">
+    <div class="prompt" id="pr" hidden><input id="pt" type="text" maxlength="140" placeholder="Describe an image. A lighthouse in a storm."><button class="pri" id="go">Create</button></div><div class="pstat"><span id="ps"></span><button class="sec" id="fk" style="padding:4px 12px;font-size:13px;margin-left:6px">Image API key</button></div>
+<div class="chips" id="chips"></div>
+    <div class="row"><label for="steps">Steps</label><input id="steps" type="range" min="4" max="50" value="24"><output id="steps_o"></output>
+      <div class="hint">More steps, more careful cleaning. Fewer steps are faster, but rougher.</div></div>
+    <div class="row"><label for="cfg">Guidance</label><input id="cfg" type="range" min="0" max="15" step="0.5" value="7.5"><output id="cfg_o"></output>
+      <div class="hint">How strictly the model follows your prompt. Too low drifts. Too high burns the colors.</div></div>
+    <div class="row"><label for="seed">Seed</label><input id="seed" type="range" min="1" max="999" value="42"><output id="seed_o"></output>
+      <div class="hint">The starting static. Same seed, same noise. New seed, new path to the picture.</div></div>
+    <div class="row"><label for="scrub">Timeline</label><input id="scrub" type="range" min="0" max="24" value="0"><output id="scrub_o"></output></div>
+    <div class="actions">
+      <button class="pri" id="play">Play</button>
+      <button class="sec" id="dice">New seed</button>
+    </div>
+  </div>
+</section>
+
+<div class="steps3">
+  <div class="card"><div class="n">01</div><h3>Start with static.</h3><p>Every image begins as pure random noise. No shape. No color. Nothing.</p></div>
+  <div class="card"><div class="n">02</div><h3>Take a guess.</h3><p>At every step, the model imagines the finished picture, then removes a little of the noise to get closer.</p></div>
+  <div class="card"><div class="n">03</div><h3>Repeat.</h3><p>Dozens of tiny corrections later, a picture emerges. Your prompt steers every one.</p></div>
+</div>
+
+<script>
+const W=128,$=id=>document.getElementById(id);
+const cvs={x:$('cx'),g:$('cg'),e:$('ce')},ctx={};
+for(const k in cvs)ctx[k]=cvs[k].getContext('2d');
+const S={scene:0,steps:24,cfg:7.5,seed:42,frame:0,playing:false,frames:null,t0:0};
+
+/* ---- Scenes (the "prompt": what the model has learned to aim for) ---- */
+function rnd(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function lg(c,y0,y1,stops){const g=c.createLinearGradient(0,y0,0,y1);stops.forEach(([p,col])=>g.addColorStop(p,col));return g}
+const scenes=[
+ {name:'Sunset over mountains',draw(c){
+  c.fillStyle=lg(c,0,W*.7,[[0,'#1b1e4b'],[.55,'#d9576b'],[1,'#ffb36b']]);c.fillRect(0,0,W,W);
+  c.fillStyle='#ffe6a8';c.beginPath();c.arc(64,76,17,0,7);c.fill();
+  c.fillStyle='#3a2347';c.beginPath();c.moveTo(0,W);c.lineTo(0,92);c.lineTo(28,70);c.lineTo(52,96);c.lineTo(80,66);c.lineTo(108,94);c.lineTo(W,80);c.lineTo(W,W);c.fill();
+  c.fillStyle='#150d1f';c.beginPath();c.moveTo(0,W);c.lineTo(0,108);c.lineTo(40,98);c.lineTo(84,110);c.lineTo(W,100);c.lineTo(W,W);c.fill()}},
+ {name:'Moon over the sea',draw(c){
+  c.fillStyle=lg(c,0,70,[[0,'#050816'],[1,'#22356f']]);c.fillRect(0,0,W,70);
+  c.fillStyle=lg(c,70,W,[[0,'#16264f'],[1,'#030611']]);c.fillRect(0,70,W,58);
+  const r=rnd(7);c.fillStyle='#fff';for(let i=0;i<40;i++)c.fillRect(r()*W,r()*60,1,1);
+  c.fillStyle='#f4f1e6';c.beginPath();c.arc(88,32,13,0,7);c.fill();
+  c.fillStyle='rgba(244,241,230,.55)';for(let y=72;y<W;y+=5)c.fillRect(88-10+Math.sin(y)*3,y,20-(y-72)/5,2)}},
+ {name:'Aurora over pines',draw(c){
+  c.fillStyle=lg(c,0,W,[[0,'#03060f'],[1,'#0b2230']]);c.fillRect(0,0,W,W);
+  for(let i=0;i<3;i++){c.strokeStyle=['rgba(80,255,170,.5)','rgba(90,200,255,.35)','rgba(170,120,255,.3)'][i];c.lineWidth=16-i*3;c.beginPath();
+   for(let x=0;x<=W;x+=4){const y=40+i*10+Math.sin(x/18+i*2)*14;x?c.lineTo(x,y):c.moveTo(x,y)}c.stroke()}
+  c.fillStyle='#02070a';for(let x=-6;x<W+10;x+=15){const h=26+(x*7%13);c.beginPath();c.moveTo(x,W);c.lineTo(x+8,W-h-12);c.lineTo(x+16,W);c.fill()}
+  c.fillRect(0,116,W,12)}}
+];
+const off=document.createElement('canvas');off.width=off.height=W;const oc=off.getContext('2d');
+const tiny=document.createElement('canvas');tiny.width=tiny.height=3;const tc=tiny.getContext('2d');
+
+function targets(){
+  oc.clearRect(0,0,W,W);scenes[S.scene].draw(oc);
+  const cond=oc.getImageData(0,0,W,W).data;
+  tc.imageSmoothingEnabled=true;tc.drawImage(off,0,0,3,3);
+  oc.imageSmoothingEnabled=true;oc.clearRect(0,0,W,W);oc.drawImage(tiny,0,0,W,W);
+  const u=oc.getImageData(0,0,W,W).data;
+  const C=new Float32Array(W*W*3),U=new Float32Array(W*W*3);
+  for(let i=0,j=0;i<W*W;i++)for(let k=0;k<3;k++,j++){C[j]=cond[i*4+k]/127.5-1;U[j]=(u[i*4+k]/127.5-1)*.55}
+  return{C,U}
+}
+function gauss(r,n){const a=new Float32Array(n);for(let i=0;i<n;i+=2){const u=r()||1e-9,v=r(),m=Math.sqrt(-2*Math.log(u));a[i]=m*Math.cos(6.2832*v);if(i+1<n)a[i+1]=m*Math.sin(6.2832*v)}return a}
+const f=u=>Math.pow(Math.cos((u+.008)/1.008*Math.PI/2),2);
+const abAt=(i,N)=>i>=N?1:Math.max(1-Math.pow(1-i/N,1.6),1e-4);
+const px=(a,lo,sc)=>{const d=new ImageData(W,W);for(let i=0;i<W*W;i++){for(let k=0;k<3;k++)d.data[i*4+k]=Math.max(0,Math.min(255,((a[i*3+k]*sc)+1)*127.5));d.data[i*4+3]=255}return d};
+
+/* ---- Reverse diffusion (DDIM-style), with classifier-free guidance ---- */
+function generate(){
+  const N=S.steps,n=W*W*3,{C,U}=targets();
+  const e0=gauss(rnd(S.seed*977),n),e2=gauss(rnd(S.seed*31+5),n),g=S.cfg/7.5;
+  let x=e0;const F={x:[px(x,0,1)],g:[],e:[],ab:[]};
+  for(let i=0;i<N;i++){
+    const ab=abAt(i,N),abn=abAt(i+1,N),sa=Math.sqrt(ab),sb=Math.sqrt(1-ab),sn=Math.sqrt(abn),sbn=Math.sqrt(1-abn);
+    const x0=new Float32Array(n),ep=new Float32Array(n),nx=new Float32Array(n),err=.3*(1-ab)/(1+S.cfg/4);
+    for(let j=0;j<n;j++){
+      let p=U[j]+g*(C[j]-U[j])+e2[j]*err;p=Math.max(-1.3,Math.min(1.3,p));
+      x0[j]=p;ep[j]=(x[j]-sa*p)/sb;nx[j]=sn*p+sbn*ep[j]}
+    F.g.push(px(x0,0,1));F.e.push(px(ep,0,.5));F.ab.push(ab);x=nx;F.x.push(px(x,0,1))}
+  F.g.push(F.x[N]);F.e.push(px(new Float32Array(n),0,1));F.ab.push(1);
+  S.frames=F;$('scrub').max=N;
+}
+function show(i){
+  const F=S.frames;if(!F)return;i=Math.max(0,Math.min(S.steps,i));S.frame=i;
+  ctx.x.putImageData(F.x[i],0,0);ctx.g.putImageData(F.g[Math.min(i,S.steps)],0,0);ctx.e.putImageData(F.e[Math.min(i,S.steps)],0,0);
+  $('scrub').value=i;$('scrub_o').textContent=i+'/'+S.steps;
+  const nz=Math.round(Math.sqrt(1-F.ab[i])*100);$('mt').style.width=nz+'%';cvs.x.style.imageRendering=i<S.steps?'pixelated':'auto';
+  $('ro').innerHTML=i==0?'<b>Step 0.</b> Pure static.':i==S.steps?'<b>Done.</b> '+S.steps+' steps.':'<b>Step '+i+'</b> of '+S.steps+' · '+nz+'% noise left';
+}
+/* ---- Playback ---- */
+function tick(t){
+  if(!S.playing)return;
+  const dur=Math.max(6000,S.steps*260),p=(t-S.t0)/dur,i=Math.floor(p*S.steps);
+  if(i>=S.steps){show(S.steps);stop();return}
+  if(i!==S.frame)show(i);requestAnimationFrame(tick)}
+function play(){if(S.frame>=S.steps)show(0);S.playing=true;$('play').textContent='Pause';S.t0=performance.now()-S.frame/S.steps*Math.max(6000,S.steps*260);requestAnimationFrame(tick)}
+function stop(){S.playing=false;$('play').textContent=S.frame>=S.steps?'Replay':'Play'}
+function regen(auto){S.playing=false;generate();show(0);if(auto)play()}
+
+/* ---- UI ---- */
+const chips=$('chips');
+scenes.forEach((s,i)=>{const b=document.createElement('button');b.className='chip'+(i?'':' on');b.textContent=s.name;b.onclick=()=>{S.scene=i;[...chips.children].forEach((c,j)=>c.classList.toggle('on',j==i));regen(true)};chips.appendChild(b)});
+const fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.hidden=true;document.body.appendChild(fi);
+const up=document.createElement('button');up.className='chip';up.textContent='+ Your image';up.onclick=()=>fi.click();chips.appendChild(up);
+function loadImg(file){if(!file||!file.type.startsWith('image/'))return;const im=new Image();im.onload=()=>{scenes[3]={name:'Your image',draw(c){const s=Math.min(im.width,im.height),sx=(im.width-s)/2,sy=(im.height-s)/2;c.drawImage(im,sx,sy,s,s,0,0,W,W)}};S.scene=3;[...chips.children].forEach(c=>c.classList.remove('on'));up.classList.add('on');up.textContent='Your image \u00b7 change';regen(true)};im.src=URL.createObjectURL(file)}
+fi.onchange=()=>{loadImg(fi.files[0]);fi.value=''};
+addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>{e.preventDefault();loadImg(e.dataTransfer.files[0])});
+$('pr').hidden=false;
+function paint(c,sp){const k=W/100,g=c.createLinearGradient(0,0,0,W);g.addColorStop(0,sp.bg[0]);g.addColorStop(1,sp.bg[1]);c.fillStyle=g;c.fillRect(0,0,W,W);
+ for(const s of sp.shapes||[]){try{c.globalAlpha=s.a==null?1:Math.max(0,Math.min(1,+s.a));c.fillStyle=s.c;c.beginPath();
+  if(s.t=='circle')c.arc(s.x*k,s.y*k,s.r*k,0,7);
+  else if(s.t=='ellipse')c.ellipse(s.x*k,s.y*k,s.rx*k,s.ry*k,0,0,7);
+  else if(s.t=='rect')c.rect(s.x*k,s.y*k,s.w*k,s.h*k);
+  else if(s.t=='poly'&&s.p){for(let i=0;i<s.p.length;i+=2)i?c.lineTo(s.p[i]*k,s.p[i+1]*k):c.moveTo(s.p[0]*k,s.p[1]*k)}
+  else if(s.t=='glow'){const r=s.r*k,rg=c.createRadialGradient(s.x*k,s.y*k,0,s.x*k,s.y*k,r);rg.addColorStop(0,s.c);rg.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=rg;c.fillRect(0,0,W,W)}
+  if(s.t!='glow')c.fill()}catch(e){}}c.globalAlpha=1}
+async function gen(){const p=$('pt').value.trim();if(!p)return;$('go').disabled=true;$('ps').textContent='Imagining\u2026';
+ try{const sp=await getSpec(p);
+  scenes[4]={name:p,draw(c){sp.img?c.drawImage(sp.img,0,0,W,W):paint(c,sp)}};S.scene=4;setTimeout(()=>{if(S.note)$('ps').textContent+=' \u00b7 '+S.note},0);[...chips.children].forEach(c=>c.classList.remove('on'));$('ps').textContent='\u201c'+p+'\u201d';regen(true)}
+ catch(e){$('ps').textContent=e&&e.code=='not_granted'?'Permission needed to create from a prompt.':'Couldn\u2019t imagine that one. Try rewording it.'}
+ $('go').disabled=false}
+const FK=()=>{try{return localStorage.getItem('fk')||''}catch(e){return ''}};
+async function viaFree(p){let r;const o={method:'POST',headers:{'Authorization':'Bearer '+FK(),'Content-Type':'application/json'},body:JSON.stringify({prompt:p})};try{r=await fetch('https://free-image-ai.du98130933.workers.dev',o)}catch(e){try{r=await fetch('/gen',o)}catch(e2){throw new Error('blocked by CORS. Run serve.py and open http://localhost:8000')}}
+ if(!r.ok)throw new Error('HTTP '+r.status);let b=await r.blob();
+ if(!b.type.startsWith('image/')){try{const j=JSON.parse(await b.text()),u=j.url||j.image||(j.output&&j.output[0]);if(!u)throw 0;b=await (await fetch(u)).blob()}catch(e){throw new Error('unexpected response')}}
+ return{img:await createImageBitmap(b)}}
+function idle(){$('ps').textContent=FK()?'Type a prompt. A real image model generates the target, then the noise resolves into it.':'Add your image API key to generate from a prompt. Until then, a simple built-in painter is used.'}
+async function getSpec(p){S.note='';if(FK()){try{return await viaFree(p)}catch(e){S.note='Image API failed ('+(e.message||e)+'), used built-in painter'}}return localSpec(p)}
+function localSpec(p){const t=p.toLowerCase(),h=(...w)=>w.some(x=>t.includes(x)),r=rnd([...t].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7)),sh=[];
+ const night=h('night','moon','star','space','neon','dark','galaxy','cyber');
+ let bg=['#1b1e4b','#ffb36b'],g=['#3a2347','#150d1f'],mode='mtn';
+ if(night){bg=['#050816','#22356f'];g=['#16264f','#030611']}
+ if(h('snow','winter','ice','arctic')){bg=night?bg:['#9bbbe0','#f4f8ff'];g=['#dfe9f5','#b9cde6']}
+ else if(h('desert','sand','dune','mars')){bg=night?bg:['#f6a35c','#fbe3a8'];g=['#d98a45','#a85f2a'];mode='dune'}
+ else if(h('forest','jungle','pine','woods','tree')){bg=night?bg:['#7ec8e3','#e6f5d0'];g=['#1f5b3a','#0f3a24'];mode='pine'}
+ else if(h('ocean','sea','beach','water','lake','ship','boat')){bg=night?bg:['#4aa3df','#d6efff'];g=['#1b5e8f','#0d3a60'];mode='sea'}
+ else if(h('city','neon','cyber','building','tower','skyline')){bg=night?bg:['#2a1a5e','#ff7aa8'];g=['#14102e','#0a0818'];mode='city'}
+ const storm=h('storm','rain','cloud','thunder');if(storm)bg=['#2b3340','#7b8794'];
+ const sx=25+r()*50;
+ sh.push({t:'glow',x:sx,y:30,r:45,c:night?'#b9ccff':'#fff2b0',a:.7});
+ if(night)for(let i=0;i<35;i++)sh.push({t:'circle',x:r()*100,y:r()*50,r:.5,c:'#fff'});
+ sh.push({t:'circle',x:sx,y:30,r:night?8:10,c:night?'#f4f1e6':'#fff6c8'});
+ if(storm)for(let i=0;i<5;i++)sh.push({t:'ellipse',x:10+r()*80,y:15+r()*20,rx:18,ry:7,c:'#4b5563',a:.8});
+ const ridge=(y,a,c)=>{const q=[0,100];for(let x=0;x<=100;x+=10)q.push(x,y-r()*a);q.push(100,100);sh.push({t:'poly',p:q,c})};
+ if(mode=='mtn'){ridge(70,25,g[0]);ridge(85,15,g[1])}
+ if(mode=='dune'){ridge(75,12,g[0]);ridge(88,8,g[1])}
+ if(mode=='sea'){sh.push({t:'rect',x:0,y:62,w:100,h:38,c:g[0]});sh.push({t:'rect',x:0,y:80,w:100,h:20,c:g[1],a:.6});for(let i=0;i<8;i++)sh.push({t:'rect',x:sx-8+i/2,y:64+i*4,w:16-i,h:1.5,c:'#fff6c8',a:.5})}
+ if(mode=='pine'){ridge(78,10,g[0]);for(let x=-4;x<108;x+=11){const e=22+r()*20;sh.push({t:'poly',p:[x,100,x+6,100-e-8,x+12,100],c:g[1]})}}
+ if(mode=='city'){for(let x=0;x<100;x+=8){const e=18+r()*42;sh.push({t:'rect',x,y:100-e,w:7,h:e,c:g[r()<.5?0:1]});for(let k=0;k<4;k++)sh.push({t:'rect',x:x+1.5+r()*3,y:100-e+4+k*8,w:1.5,h:2,c:'#ffd86b',a:.8})}}
+ return{bg,shapes:sh}}
+idle();
+$('fk').onclick=()=>{const k=prompt('Image API key (kept only in this browser). Leave empty to remove.',FK());if(k===null)return;try{k.trim()?localStorage.setItem('fk',k.trim()):localStorage.removeItem('fk')}catch(e){}idle()};
+$('go').onclick=gen;$('pt').onkeydown=e=>{if(e.key=='Enter')gen()};
+const bind=(id,key,fmt,auto)=>{const el=$(id);const upd=()=>{S[key]=+el.value;$(id+'_o').textContent=fmt?fmt(S[key]):S[key]};el.oninput=upd;el.onchange=()=>regen(true);upd()};
+bind('steps','steps');bind('cfg','cfg',v=>v.toFixed(1));bind('seed','seed');
+$('play').onclick=()=>S.playing?stop():play();
+$('dice').onclick=()=>{$('seed').value=S.seed=1+Math.floor(Math.random()*999);$('seed_o').textContent=S.seed;regen(true)};
+$('scrub').oninput=e=>{S.playing=false;$('play').textContent='Play';show(+e.target.value)};
+regen(true);
+</script>
+</body>
+</html>
