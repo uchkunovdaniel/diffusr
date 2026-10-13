@@ -225,7 +225,7 @@ function localSpec(p){const t=p.toLowerCase(),h=(...w)=>w.some(x=>t.includes(x))
  if(mode=='city'){for(let x=0;x<100;x+=8){const e=18+r()*42;sh.push({t:'rect',x,y:100-e,w:7,h:e,c:g[r()<.5?0:1]});for(let k=0;k<4;k++)sh.push({t:'rect',x:x+1.5+r()*3,y:100-e+4+k*8,w:1.5,h:2,c:'#ffd86b',a:.8})}}
  return{bg,shapes:sh}}
 idle();
-$('fk').onclick=()=>{const k=prompt('Image API key (kept only in this browser). Leave empty to remove.',FK());if(k===null)return;try{k.trim()?localStorage.setItem('fk',k.trim()):localStorage.removeItem('fk')}catch(e){}idle()};
+$('fk').onclick=()=>{const k=prompt('Y1g4V2QFMhqnSUDgqdkNoHtXIq4QN9Ns',FK());if(k===null)return;try{k.trim()?localStorage.setItem('fk',k.trim()):localStorage.removeItem('fk')}catch(e){}idle()};
 $('go').onclick=gen;$('pt').onkeydown=e=>{if(e.key=='Enter')gen()};
 const bind=(id,key,fmt,auto)=>{const el=$(id);const upd=()=>{S[key]=+el.value;$(id+'_o').textContent=fmt?fmt(S[key]):S[key]};el.oninput=upd;el.onchange=()=>regen(true);upd()};
 bind('steps','steps');bind('cfg','cfg',v=>v.toFixed(1));bind('seed','seed');
